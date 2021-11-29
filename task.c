@@ -27,6 +27,7 @@ create_task (unsigned char *buffer)
   if (!task)
     return NULL;
   task->buffer = buffer;
+  task->mode = op_16;
   return task;
 }
 

@@ -18,8 +18,8 @@
 #include <stdlib.h>
 #include "task.h"
 
-void
-decode_modrm (unsigned char **dest, unsigned char **src)
+static void
+decode_modrm_16 (unsigned char **dest, unsigned char **src)
 {
   unsigned char byte = CURRENT_INST;
   registers->eip++;
@@ -55,7 +55,98 @@ decode_modrm (unsigned char **dest, unsigned char **src)
 	  break;
 	}
       break;
+    case 1:
+      switch ((byte >> 3) & 7)
+	{
+	case 0:
+	  *dest = memory + registers->bx + registers->si + CURRENT_INST;
+	  registers->eip++;
+	  break;
+	case 1:
+	  *dest = memory + registers->bx + registers->di + CURRENT_INST;
+	  registers->eip++;
+	  break;
+	case 2:
+	  *dest = memory + registers->bp + registers->si + CURRENT_INST;
+	  registers->eip++;
+	  break;
+	case 3:
+	  *dest = memory + registers->bp + registers->di + CURRENT_INST;
+	  registers->eip++;
+	  break;
+	case 4:
+	  *dest = memory + registers->si + CURRENT_INST;
+	  registers->eip++;
+	  break;
+	case 5:
+	  *dest = memory + registers->di + CURRENT_INST;
+	  registers->eip++;
+	  break;
+	case 6:
+	  *dest = memory + registers->bp + CURRENT_INST;
+	  registers->eip++;
+	  break;
+	case 7:
+	  *dest = memory + registers->bx + CURRENT_INST;
+	  registers->eip++;
+	  break;
+	}
+      break;
+    case 2:
+      switch ((byte >> 3) & 7)
+	{
+	case 0:
+	  *dest = memory + registers->bx + registers->si + CURRENT_INST;
+	  registers->eip++;
+	  break;
+	case 1:
+	  *dest = memory + registers->bx + registers->di +
+	    *((unsigned short *) &CURRENT_INST);
+	  registers->eip += 2;
+	  break;
+	case 2:
+	  *dest = memory + registers->bp + registers->si +
+	    *((unsigned short *) &CURRENT_INST);
+	  registers->eip += 2;
+	  break;
+	case 3:
+	  *dest = memory + registers->bp + registers->di +
+	    *((unsigned short *) &CURRENT_INST);
+	  registers->eip += 2;
+	  break;
+	case 4:
+	  *dest = memory + registers->si + *((unsigned short *) &CURRENT_INST);
+	  registers->eip += 2;
+	  break;
+	case 5:
+	  *dest = memory + registers->di + *((unsigned short *) &CURRENT_INST);
+	  registers->eip += 2;
+	  break;
+	case 6:
+	  *dest = memory + registers->bp + *((unsigned short *) &CURRENT_INST);
+	  registers->eip += 2;
+	  break;
+	case 7:
+	  *dest = memory + registers->bx + *((unsigned short *) &CURRENT_INST);
+	  registers->eip += 2;
+	  break;
+	}
+      break;
     }
+}
+
+static void
+decode_modrm_32 (unsigned char **dest, unsigned char **src)
+{
+}
+
+void
+decode_modrm (unsigned char **dest, unsigned char **src)
+{
+  if (curr_task->mode == op_16)
+    decode_modrm_16 (dest, src);
+  else
+    decode_modrm_32 (dest, src);
 }
 
 void

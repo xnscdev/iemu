@@ -23,9 +23,17 @@
 #define CURRENT_INST						\
   (memory[(unsigned int) registers->cs * 16 + registers->eip])
 
+enum opmode
+{
+  op_16,
+  op_32,
+  op_64
+};
+
 struct task
 {
   unsigned char *buffer;
+  enum opmode mode;
   struct registers registers;
 };
 
