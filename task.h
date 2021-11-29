@@ -20,6 +20,9 @@
 #include "opcode.h"
 #include "register.h"
 
+#define CURRENT_INST						\
+  (memory[(unsigned int) registers->cs * 16 + registers->eip])
+
 struct task
 {
   unsigned char *buffer;

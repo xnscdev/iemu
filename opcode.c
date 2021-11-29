@@ -19,13 +19,57 @@
 #include "task.h"
 
 void
+decode_modrm (unsigned char **dest, unsigned char **src)
+{
+  unsigned char byte = CURRENT_INST;
+  registers->eip++;
+  switch (byte >> 6)
+    {
+    case 0:
+      switch ((byte >> 3) & 7)
+	{
+	case 0:
+	  *dest = memory + registers->bx + registers->si;
+	  break;
+	case 1:
+	  *dest = memory + registers->bx + registers->di;
+	  break;
+	case 2:
+	  *dest = memory + registers->bp + registers->si;
+	  break;
+	case 3:
+	  *dest = memory + registers->bp + registers->di;
+	  break;
+	case 4:
+	  *dest = memory + registers->si;
+	  break;
+	case 5:
+	  *dest = memory + registers->di;
+	  break;
+	case 6:
+	  *dest = memory + *((unsigned short *) &CURRENT_INST);
+	  registers->eip += 2;
+	  break;
+	case 7:
+	  *dest = memory + registers->bx;
+	  break;
+	}
+      break;
+    }
+}
+
+void
 exec_inst (void)
 {
-  unsigned char opcode = memory[registers->cs * 16 + registers->eip];
+  unsigned char opcode = CURRENT_INST;
+  unsigned char *dest;
+  unsigned char *src;
   switch (opcode)
     {
     case 0x00:
       registers->eip++;
+      decode_modrm (&dest, &src);
+      *dest += *src;
       break;
     default:
       fprintf (stderr, "Invalid opcode 0x%02x at 0x%04x:0x%04x\n", opcode,

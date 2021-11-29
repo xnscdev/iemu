@@ -41,7 +41,7 @@ void
 set_task_current (struct task *task)
 {
   curr_task = task;
-  memory = &task->buffer;
+  memory = task->buffer;
   registers = &task->registers;
 }
 

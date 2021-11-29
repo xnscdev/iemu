@@ -1,4 +1,9 @@
-project('iemu', 'c', version: '0.0.1', license: 'GPL-3.0-or-later')
+project('iemu', 'c', version: '0.0.1', license: 'GPL-3.0-or-later',
+        default_options: ['c_std=gnu11'])
+
+if host_machine.endian() != 'little'
+  error('IEMU only supports little-endian host machines.')
+endif
 
 epoxy_dep = dependency('epoxy', required: true)
 glfw_dep = dependency('glfw3', required: true)

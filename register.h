@@ -19,14 +19,66 @@
 
 struct registers
 {
-  unsigned int eax;
-  unsigned int ecx;
-  unsigned int edx;
-  unsigned int ebx;
-  unsigned int esp;
-  unsigned int ebp;
-  unsigned int esi;
-  unsigned int edi;
+  union
+  {
+    unsigned int eax;
+    unsigned short ax;
+    struct
+    {
+      unsigned char al;
+      unsigned char ah;
+    };
+  };
+  union
+  {
+    unsigned int ecx;
+    unsigned short cx;
+    struct
+    {
+      unsigned char cl;
+      unsigned char ch;
+    };
+  };
+  union
+  {
+    unsigned int edx;
+    unsigned short dx;
+    struct
+    {
+      unsigned char dl;
+      unsigned char dh;
+    };
+  };
+  union
+  {
+    unsigned int ebx;
+    unsigned short bx;
+    struct
+    {
+      unsigned char bl;
+      unsigned char bh;
+    };
+  };
+  union
+  {
+    unsigned int esp;
+    unsigned short sp;
+  };
+  union
+  {
+    unsigned int ebp;
+    unsigned short bp;
+  };
+  union
+  {
+    unsigned int esi;
+    unsigned short si;
+  };
+  union
+  {
+    unsigned int edi;
+    unsigned short di;
+  };
   unsigned int eip;
   unsigned int eflags;
   unsigned short cs;
