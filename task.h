@@ -17,6 +17,7 @@
 #ifndef __TASK_H
 #define __TASK_H
 
+#include "opcode.h"
 #include "register.h"
 
 struct task
@@ -26,6 +27,7 @@ struct task
 };
 
 extern struct task *curr_task;
+extern unsigned char *memory;
 
 struct task *create_task (unsigned char *buffer);
 void free_task (struct task *task);

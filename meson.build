@@ -5,6 +5,7 @@ glfw_dep = dependency('glfw3', required: true)
 
 iemu_src = [
   'main.c',
+  'opcode.c',
   'register.c',
   'task.c'
 ]

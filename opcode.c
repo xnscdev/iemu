@@ -1,4 +1,4 @@
-/* task.c -- This file is part of IEMU.
+/* opcode.c -- This file is part of IEMU.
    Copyright (C) 2021 XNSC
 
    IEMU is free software: you can redistribute it and/or modify
@@ -14,40 +14,22 @@
    You should have received a copy of the GNU General Public License
    along with IEMU. If not, see <https://www.gnu.org/licenses/>. */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include "task.h"
 
-struct task *curr_task;
-unsigned char *memory;
-
-struct task *
-create_task (unsigned char *buffer)
-{
-  struct task *task = calloc (1, sizeof (struct task));
-  if (!task)
-    return NULL;
-  task->buffer = buffer;
-  return task;
-}
-
 void
-free_task (struct task *task)
+exec_inst (void)
 {
-  free (task->buffer);
-  free (task);
-}
-
-void
-set_task_current (struct task *task)
-{
-  curr_task = task;
-  memory = &task->buffer;
-  registers = &task->registers;
-}
-
-void
-execute (void)
-{
-  while (1)
-    exec_inst ();
+  unsigned char opcode = memory[registers->cs * 16 + registers->eip];
+  switch (opcode)
+    {
+    case 0x00:
+      registers->eip++;
+      break;
+    default:
+      fprintf (stderr, "Invalid opcode 0x%02x at 0x%04x:0x%04x\n", opcode,
+	       registers->cs, registers->eip);
+      exit (1);
+    }
 }
