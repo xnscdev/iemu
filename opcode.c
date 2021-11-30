@@ -235,13 +235,13 @@ decode_rm_32 (unsigned char byte, enum opmode size, unsigned char **rm,
 }
 
 static void
-decode_modrm (enum opmode size, unsigned short *segment, unsigned char **rm,
-	      unsigned char **r)
+decode_modrm (enum opmode size, enum opmode addrsize, unsigned short *segment,
+	      unsigned char **rm, unsigned char **r)
 {
   unsigned char byte = CURRENT_INST;
   char ss = 0;
   EIP++;
-  if (curr_task->mode == op_16)
+  if (addrsize == op_16)
     decode_rm_16 (byte, size, rm, &ss);
   else if (decode_rm_32 (byte, size, rm, &ss))
     {
@@ -281,6 +281,7 @@ exec_inst (void)
   unsigned char *rm;
   unsigned char *r;
   enum opmode size = curr_task->mode;
+  enum opmode addrsize = curr_task->mode;
   EIP++;
 
  read:
@@ -289,13 +290,13 @@ exec_inst (void)
     case 0x00: /* ADD r/m8, r8 */
       size = op_8;
     case 0x01: /* ADD r/m16/32, r16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_add (size, rm, r);
       break;
     case 0x02: /* ADD r8, r/m8 */
       size = op_8;
     case 0x03: /* ADD r16/32, r/m16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_add (size, r, rm);
       break;
     case 0x04: /* ADD AL, imm8 */
@@ -313,13 +314,13 @@ exec_inst (void)
     case 0x08: /* OR r/m8, r8 */
       size = op_8;
     case 0x09: /* OR r/m16/32, r16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_or (size, rm, r);
       break;
     case 0x0a: /* OR r8, r/m8 */
       size = op_8;
     case 0x0b: /* OR r16/32, r/m16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_or (size, r, rm);
       break;
     case 0x0c: /* OR AL, imm8 */
@@ -337,13 +338,13 @@ exec_inst (void)
     case 0x10: /* ADC r/m8, r8 */
       size = op_8;
     case 0x11: /* ADC r/m16/32, r16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_adc (size, rm, r);
       break;
     case 0x12: /* ADC r8, r/m8 */
       size = op_8;
     case 0x13: /* ADC r16/32, r/m16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_adc (size, r, rm);
       break;
     case 0x14: /* ADC AL, imm8 */
@@ -361,13 +362,13 @@ exec_inst (void)
     case 0x18: /* SBB r/m8, r8 */
       size = op_8;
     case 0x19: /* SBB r/m16/32, r16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_sbb (size, rm, r);
       break;
     case 0x1a: /* SBB r8, r/m8 */
       size = op_8;
     case 0x1b: /* SBB r16/32, r/m16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_sbb (size, r, rm);
       break;
     case 0x1c: /* SBB AL, imm8 */
@@ -385,13 +386,13 @@ exec_inst (void)
     case 0x20: /* AND r/m8, r8 */
       size = op_8;
     case 0x21: /* AND r/m16/32, r16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_and (size, rm, r);
       break;
     case 0x22: /* AND r8, r/m8 */
       size = op_8;
     case 0x23: /* AND r16/32, r/m16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_and (size, r, rm);
       break;
     case 0x24: /* AND AL, imm8 */
@@ -411,13 +412,13 @@ exec_inst (void)
     case 0x28: /* SUB r/m8, r8 */
       size = op_8;
     case 0x29: /* SUB r/m16/32, r16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_sub (size, rm, r);
       break;
     case 0x2a: /* SUB r8, r/m8 */
       size = op_8;
     case 0x2b: /* SUB r16/32, r/m16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_sub (size, r, rm);
       break;
     case 0x2c: /* SUB AL, imm8 */
@@ -437,13 +438,13 @@ exec_inst (void)
     case 0x30: /* XOR r/m8, r8 */
       size = op_8;
     case 0x31: /* XOR r/m16/32, r16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_xor (size, rm, r);
       break;
     case 0x32: /* XOR r8, r/m8 */
       size = op_8;
     case 0x33: /* XOR r16/32, r/m16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_xor (size, r, rm);
       break;
     case 0x34: /* XOR AL, imm8 */
@@ -463,13 +464,13 @@ exec_inst (void)
     case 0x38: /* CMP r/m8, r8 */
       size = op_8;
     case 0x39: /* CMP r/m16/32, r16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_cmp (size, rm, r);
       break;
     case 0x3a: /* CMP r8, r/m8 */
       size = op_8;
     case 0x3b: /* CMP r16/32, r/m16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_cmp (size, r, rm);
       break;
     case 0x3c: /* CMP AL, imm8 */
@@ -533,14 +534,35 @@ exec_inst (void)
       i_popa (size);
       break;
     case 0x62: /* BOUND r16/32, m16/32&16/32 */
-      decode_modrm (size, segment, &rm, &r);
+      decode_modrm (size, addrsize, segment, &rm, &r);
       i_bound (size, r, rm);
       break;
+    case 0x63: /* ARPL r/m16, r16 */
+      exception (exc_UD);
+      break;
+    case 0x64: /* FS segment override prefix */
+      segment = &FS;
+      opcode = CURRENT_INST;
+      EIP++;
+      goto read;
+    case 0x65: /* GS segment override prefix */
+      segment = &GS;
+      opcode = CURRENT_INST;
+      EIP++;
+      goto read;
     case 0x66: /* Operand size override prefix */
       if (size == op_16)
 	size = op_32;
       else
 	size = op_16;
+      opcode = CURRENT_INST;
+      EIP++;
+      goto read;
+    case 0x67: /* Address size override prefix */
+      if (addrsize == op_16)
+	addrsize = op_32;
+      else
+	addrsize = op_16;
       opcode = CURRENT_INST;
       EIP++;
       goto read;
