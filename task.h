@@ -17,25 +17,11 @@
 #ifndef __TASK_H
 #define __TASK_H
 
+#include "inst.h"
 #include "opcode.h"
 #include "register.h"
 
 #define CURRENT_INST (memory[(unsigned int) CS * 16 + EIP])
-
-enum opmode
-{
-  mode_16,
-  mode_32,
-  mode_64
-};
-
-enum opsize
-{
-  size_8,
-  size_16,
-  size_32,
-  size_64
-};
 
 struct task
 {

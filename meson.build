@@ -9,6 +9,7 @@ epoxy_dep = dependency('epoxy', required: true)
 glfw_dep = dependency('glfw3', required: true)
 
 iemu_src = [
+  'inst.c',
   'main.c',
   'opcode.c',
   'register.c',

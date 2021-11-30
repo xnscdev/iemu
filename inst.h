@@ -1,4 +1,4 @@
-/* opcode.h -- This file is part of IEMU.
+/* inst.h -- This file is part of IEMU.
    Copyright (C) 2021 XNSC
 
    IEMU is free software: you can redistribute it and/or modify
@@ -14,13 +14,17 @@
    You should have received a copy of the GNU General Public License
    along with IEMU. If not, see <https://www.gnu.org/licenses/>. */
 
-#ifndef __OPCODE_H
-#define __OPCODE_H
+#ifndef __INST_H
+#define __INST_H
 
-#define OP16(x) (*((unsigned short *) (x)))
-#define OP32(x) (*((unsigned int *) (x)))
+enum opmode
+{
+  op_8      = 1,
+  op_16     = 2,
+  op_32     = 4,
+  op_64     = 8
+};
 
-void exec_inst (void);
-void init_opcodes (void);
+void i_add (enum opmode size, unsigned char *dest, unsigned char *src);
 
 #endif

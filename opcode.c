@@ -30,7 +30,7 @@ invalid_opcode (void)
 }
 
 static void
-decode_rm_16 (unsigned char byte, enum opsize size, unsigned char **rm)
+decode_rm_16 (unsigned char byte, enum opmode size, unsigned char **rm)
 {
   switch (byte >> 6)
     {
@@ -139,7 +139,7 @@ decode_rm_16 (unsigned char byte, enum opsize size, unsigned char **rm)
 	}
       break;
     case 3:
-      if (size == size_8)
+      if (size == op_8)
 	*rm = reg_map_8[byte & 7];
       else
 	*rm = (unsigned char *) reg_map_32[byte & 7];
@@ -148,7 +148,7 @@ decode_rm_16 (unsigned char byte, enum opsize size, unsigned char **rm)
 }
 
 static void
-decode_sib (enum opsize size, unsigned char **rm)
+decode_sib (enum opmode size, unsigned char **rm)
 {
   unsigned char byte = CURRENT_INST;
   EIP++;
@@ -159,7 +159,7 @@ decode_sib (enum opsize size, unsigned char **rm)
 }
 
 static int
-decode_rm_32 (unsigned char byte, enum opsize size, unsigned char **rm)
+decode_rm_32 (unsigned char byte, enum opmode size, unsigned char **rm)
 {
   switch (byte >> 6)
     {
@@ -208,7 +208,7 @@ decode_rm_32 (unsigned char byte, enum opsize size, unsigned char **rm)
 	}
       break;
     case 3:
-      if (size == size_8)
+      if (size == op_8)
 	*rm = reg_map_8[byte & 7];
       else
 	*rm = (unsigned char *) reg_map_32[byte & 7];
@@ -217,16 +217,16 @@ decode_rm_32 (unsigned char byte, enum opsize size, unsigned char **rm)
   return 0;
 }
 
-void
-decode_modrm (enum opsize size, unsigned char **rm, unsigned char **r)
+static void
+decode_modrm (enum opmode size, unsigned char **rm, unsigned char **r)
 {
   unsigned char byte = CURRENT_INST;
   EIP++;
-  if (curr_task->mode == mode_16)
+  if (curr_task->mode == op_16)
     decode_rm_16 (byte, size, rm);
   else if (decode_rm_32 (byte, size, rm))
     return;
-  if (size == size_8)
+  if (size == op_8)
     *r = reg_map_8[(byte >> 3) & 7];
   else
     *r = (unsigned char *) reg_map_32[(byte >> 3) & 7];
@@ -238,16 +238,40 @@ exec_inst (void)
   unsigned char opcode = CURRENT_INST;
   unsigned char *rm;
   unsigned char *r;
+  enum opmode size = curr_task->mode;
+  EIP++;
+
+ read:
   switch (opcode)
     {
-    case 0x00:
-      EIP++;
-      decode_modrm (size_8, &rm, &r);
-      *rm += *r;
+    case 0x00: /* ADD r/m8, r8 */
+      size = op_8;
+    case 0x01: /* ADD r/m16/32, r16/32 */
+      decode_modrm (size, &rm, &r);
+      i_add (size, rm, r);
       break;
+    case 0x02: /* ADD r8, r/m8 */
+      size = op_8;
+    case 0x03: /* ADD r16/32, r/m16/32 */
+      decode_modrm (size, &rm, &r);
+      i_add (size, r, rm);
+      break;
+    case 0x04: /* ADD AL, imm8 */
+      size = op_8;
+    case 0x05: /* ADD eAX, imm16/32 */
+      i_add (size, &AL, &CURRENT_INST);
+      EIP += size;
+      break;
+    case 0x66: /* Operand size override prefix */
+      if (size == op_16)
+	size = op_32;
+      else
+	size = op_16;
+      goto read;
     default:
       invalid_opcode ();
     }
+
   EIP_REAL = EIP;
 }
 
