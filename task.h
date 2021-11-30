@@ -20,14 +20,21 @@
 #include "opcode.h"
 #include "register.h"
 
-#define CURRENT_INST						\
-  (memory[(unsigned int) registers->cs * 16 + registers->eip])
+#define CURRENT_INST (memory[(unsigned int) CS * 16 + EIP])
 
 enum opmode
 {
-  op_16,
-  op_32,
-  op_64
+  mode_16,
+  mode_32,
+  mode_64
+};
+
+enum opsize
+{
+  size_8,
+  size_16,
+  size_32,
+  size_64
 };
 
 struct task

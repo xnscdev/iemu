@@ -18,5 +18,6 @@
 #define __OPCODE_H
 
 void exec_inst (void);
+void init_opcodes (void);
 
 #endif

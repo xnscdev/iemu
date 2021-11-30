@@ -18,153 +18,256 @@
 #include <stdlib.h>
 #include "task.h"
 
+static unsigned char sib_scales[4] = {1, 2, 4, 8};
+static unsigned char *reg_map_8[8];
+static unsigned int *reg_map_32[8];
+
 static void
-decode_modrm_16 (unsigned char **dest, unsigned char **src)
+invalid_opcode (void)
 {
-  unsigned char byte = CURRENT_INST;
-  registers->eip++;
+  fprintf (stderr, "Invalid opcode at 0x%04x:0x%04x\n", CS, EIP_REAL);
+  exit (1);
+}
+
+static void
+decode_rm_16 (unsigned char byte, enum opsize size, unsigned char **rm)
+{
   switch (byte >> 6)
     {
     case 0:
-      switch ((byte >> 3) & 7)
+      switch (byte & 7)
 	{
 	case 0:
-	  *dest = memory + registers->bx + registers->si;
+	  *rm = memory + BX + SI;
 	  break;
 	case 1:
-	  *dest = memory + registers->bx + registers->di;
+	  *rm = memory + BX + DI;
 	  break;
 	case 2:
-	  *dest = memory + registers->bp + registers->si;
+	  *rm = memory + BP + SI;
 	  break;
 	case 3:
-	  *dest = memory + registers->bp + registers->di;
+	  *rm = memory + BP + DI;
 	  break;
 	case 4:
-	  *dest = memory + registers->si;
+	  *rm = memory + SI;
 	  break;
 	case 5:
-	  *dest = memory + registers->di;
+	  *rm = memory + DI;
 	  break;
 	case 6:
-	  *dest = memory + *((unsigned short *) &CURRENT_INST);
-	  registers->eip += 2;
+	  *rm = memory + *((unsigned short *) &CURRENT_INST);
+	  EIP += 2;
 	  break;
 	case 7:
-	  *dest = memory + registers->bx;
+	  *rm = memory + BX;
 	  break;
 	}
       break;
     case 1:
-      switch ((byte >> 3) & 7)
+      switch (byte & 7)
 	{
 	case 0:
-	  *dest = memory + registers->bx + registers->si + CURRENT_INST;
-	  registers->eip++;
+	  *rm = memory + BX + SI + CURRENT_INST;
+	  EIP++;
 	  break;
 	case 1:
-	  *dest = memory + registers->bx + registers->di + CURRENT_INST;
-	  registers->eip++;
+	  *rm = memory + BX + DI + CURRENT_INST;
+	  EIP++;
 	  break;
 	case 2:
-	  *dest = memory + registers->bp + registers->si + CURRENT_INST;
-	  registers->eip++;
+	  *rm = memory + BP + SI + CURRENT_INST;
+	  EIP++;
 	  break;
 	case 3:
-	  *dest = memory + registers->bp + registers->di + CURRENT_INST;
-	  registers->eip++;
+	  *rm = memory + BP + DI + CURRENT_INST;
+	  EIP++;
 	  break;
 	case 4:
-	  *dest = memory + registers->si + CURRENT_INST;
-	  registers->eip++;
+	  *rm = memory + SI + CURRENT_INST;
+	  EIP++;
 	  break;
 	case 5:
-	  *dest = memory + registers->di + CURRENT_INST;
-	  registers->eip++;
+	  *rm = memory + DI + CURRENT_INST;
+	  EIP++;
 	  break;
 	case 6:
-	  *dest = memory + registers->bp + CURRENT_INST;
-	  registers->eip++;
+	  *rm = memory + BP + CURRENT_INST;
+	  EIP++;
 	  break;
 	case 7:
-	  *dest = memory + registers->bx + CURRENT_INST;
-	  registers->eip++;
+	  *rm = memory + BX + CURRENT_INST;
+	  EIP++;
 	  break;
 	}
       break;
     case 2:
-      switch ((byte >> 3) & 7)
+      switch (byte & 7)
 	{
 	case 0:
-	  *dest = memory + registers->bx + registers->si + CURRENT_INST;
-	  registers->eip++;
+	  *rm = memory + BX + SI + *((unsigned short *) &CURRENT_INST);
+	  EIP += 2;
 	  break;
 	case 1:
-	  *dest = memory + registers->bx + registers->di +
-	    *((unsigned short *) &CURRENT_INST);
-	  registers->eip += 2;
+	  *rm = memory + BX + DI + *((unsigned short *) &CURRENT_INST);
+	  EIP += 2;
 	  break;
 	case 2:
-	  *dest = memory + registers->bp + registers->si +
-	    *((unsigned short *) &CURRENT_INST);
-	  registers->eip += 2;
+	  *rm = memory + BP + SI + *((unsigned short *) &CURRENT_INST);
+	  EIP += 2;
 	  break;
 	case 3:
-	  *dest = memory + registers->bp + registers->di +
-	    *((unsigned short *) &CURRENT_INST);
-	  registers->eip += 2;
+	  *rm = memory + BP + DI + *((unsigned short *) &CURRENT_INST);
+	  EIP += 2;
 	  break;
 	case 4:
-	  *dest = memory + registers->si + *((unsigned short *) &CURRENT_INST);
-	  registers->eip += 2;
+	  *rm = memory + SI + *((unsigned short *) &CURRENT_INST);
+	  EIP += 2;
 	  break;
 	case 5:
-	  *dest = memory + registers->di + *((unsigned short *) &CURRENT_INST);
-	  registers->eip += 2;
+	  *rm = memory + DI + *((unsigned short *) &CURRENT_INST);
+	  EIP += 2;
 	  break;
 	case 6:
-	  *dest = memory + registers->bp + *((unsigned short *) &CURRENT_INST);
-	  registers->eip += 2;
+	  *rm = memory + BP + *((unsigned short *) &CURRENT_INST);
+	  EIP += 2;
 	  break;
 	case 7:
-	  *dest = memory + registers->bx + *((unsigned short *) &CURRENT_INST);
-	  registers->eip += 2;
+	  *rm = memory + BX + *((unsigned short *) &CURRENT_INST);
+	  EIP += 2;
 	  break;
 	}
+      break;
+    case 3:
+      if (size == size_8)
+	*rm = reg_map_8[byte & 7];
+      else
+	*rm = (unsigned char *) reg_map_32[byte & 7];
       break;
     }
 }
 
 static void
-decode_modrm_32 (unsigned char **dest, unsigned char **src)
+decode_sib (enum opsize size, unsigned char **rm)
 {
+  unsigned char byte = CURRENT_INST;
+  EIP++;
+  if ((byte & 7) == 4)
+    invalid_opcode ();
+  *rm = memory + *reg_map_32[byte & 7] * sib_scales[byte >> 6] +
+    *reg_map_32[(byte >> 3) & 7];
+}
+
+static int
+decode_rm_32 (unsigned char byte, enum opsize size, unsigned char **rm)
+{
+  switch (byte >> 6)
+    {
+    case 0:
+      switch (byte & 7)
+	{
+	case 4:
+	  decode_sib (size, rm);
+	  return 1;
+	case 5:
+	  *rm = memory + *((unsigned int *) &CURRENT_INST);
+	  EIP += 4;
+	  break;
+	default:
+	  *rm = memory + *reg_map_32[byte & 7];
+	}
+      break;
+    case 1:
+      if ((byte & 7) == 4)
+	{
+	  decode_sib (size, rm);
+	  *rm += CURRENT_INST;
+	  EIP++;
+	  return 1;
+	}
+      else
+	{
+	  *rm = memory + *reg_map_32[byte & 7] +
+	    *((unsigned int *) &CURRENT_INST);
+	  EIP += 4;
+	}
+      break;
+    case 2:
+      if ((byte & 7) == 4)
+	{
+	  decode_sib (size, rm);
+	  *rm += *((unsigned int *) &CURRENT_INST);
+	  EIP += 4;
+	  return 1;
+	}
+      else
+	{
+	  *rm = memory + *reg_map_32[byte & 7] +
+	    *((unsigned int *) &CURRENT_INST);
+	  EIP += 4;
+	}
+      break;
+    case 3:
+      if (size == size_8)
+	*rm = reg_map_8[byte & 7];
+      else
+	*rm = (unsigned char *) reg_map_32[byte & 7];
+      break;
+    }
+  return 0;
 }
 
 void
-decode_modrm (unsigned char **dest, unsigned char **src)
+decode_modrm (enum opsize size, unsigned char **rm, unsigned char **r)
 {
-  if (curr_task->mode == op_16)
-    decode_modrm_16 (dest, src);
+  unsigned char byte = CURRENT_INST;
+  EIP++;
+  if (curr_task->mode == mode_16)
+    decode_rm_16 (byte, size, rm);
+  else if (decode_rm_32 (byte, size, rm))
+    return;
+  if (size == size_8)
+    *r = reg_map_8[(byte >> 3) & 7];
   else
-    decode_modrm_32 (dest, src);
+    *r = (unsigned char *) reg_map_32[(byte >> 3) & 7];
 }
 
 void
 exec_inst (void)
 {
   unsigned char opcode = CURRENT_INST;
-  unsigned char *dest;
-  unsigned char *src;
+  unsigned char *rm;
+  unsigned char *r;
   switch (opcode)
     {
     case 0x00:
-      registers->eip++;
-      decode_modrm (&dest, &src);
-      *dest += *src;
+      EIP++;
+      decode_modrm (size_8, &rm, &r);
+      *rm += *r;
       break;
     default:
-      fprintf (stderr, "Invalid opcode 0x%02x at 0x%04x:0x%04x\n", opcode,
-	       registers->cs, registers->eip);
-      exit (1);
+      invalid_opcode ();
     }
+  EIP_REAL = EIP;
+}
+
+void
+init_opcodes (void)
+{
+  reg_map_8[0] = &AL;
+  reg_map_8[1] = &CL;
+  reg_map_8[2] = &DL;
+  reg_map_8[3] = &BL;
+  reg_map_8[4] = &AH;
+  reg_map_8[5] = &CH;
+  reg_map_8[6] = &DH;
+  reg_map_8[7] = &BH;
+  reg_map_32[0] = &EAX;
+  reg_map_32[1] = &ECX;
+  reg_map_32[2] = &EDX;
+  reg_map_32[3] = &EBX;
+  reg_map_32[4] = &ESP;
+  reg_map_32[5] = &EBP;
+  reg_map_32[6] = &ESI;
+  reg_map_32[7] = &EDI;
 }

@@ -27,7 +27,7 @@ create_task (unsigned char *buffer)
   if (!task)
     return NULL;
   task->buffer = buffer;
-  task->mode = op_16;
+  task->mode = mode_16;
   return task;
 }
 
@@ -49,6 +49,7 @@ set_task_current (struct task *task)
 void
 execute (void)
 {
+  init_opcodes ();
   while (1)
     exec_inst ();
 }

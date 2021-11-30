@@ -80,6 +80,7 @@ struct registers
     unsigned short di;
   };
   unsigned int eip;
+  unsigned int eip_real;
   unsigned int eflags;
   unsigned short cs;
   unsigned short ds;
@@ -88,6 +89,40 @@ struct registers
   unsigned short gs;
   unsigned short ss;
 };
+
+#define AL                      registers->al
+#define AH                      registers->ah
+#define AX                      registers->ax
+#define EAX                     registers->eax
+#define CL                      registers->cl
+#define CH                      registers->ch
+#define CX                      registers->cx
+#define ECX                     registers->ecx
+#define DL                      registers->dl
+#define DH                      registers->dh
+#define DX                      registers->dx
+#define EDX                     registers->edx
+#define BL                      registers->bl
+#define BH                      registers->bh
+#define BX                      registers->bx
+#define EBX                     registers->ebx
+#define SP                      registers->sp
+#define ESP                     registers->esp
+#define BP                      registers->bp
+#define EBP                     registers->ebp
+#define SI                      registers->si
+#define ESI                     registers->esi
+#define DI                      registers->di
+#define EDI                     registers->edi
+#define EIP                     registers->eip
+#define EIP_REAL                registers->eip_real
+#define EFLAGS                  registers->eflags
+#define CS                      registers->cs
+#define DS                      registers->ds
+#define ES                      registers->es
+#define FS                      registers->fs
+#define GS                      registers->gs
+#define SS                      registers->ss
 
 extern struct registers *registers;
 
