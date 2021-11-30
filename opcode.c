@@ -513,6 +513,32 @@ exec_inst (void)
     case 0x4f:
       i_dec (size, (unsigned char *) reg_map_32[opcode - 0x48]);
       break;
+    case 0x50: /* PUSH r16/32 */
+    case 0x51:
+    case 0x52:
+    case 0x53:
+    case 0x54:
+    case 0x55:
+    case 0x56:
+    case 0x57:
+      i_push (size, (unsigned char *) reg_map_32[opcode - 0x50]);
+      break;
+    case 0x58: /* POP r16/32 */
+    case 0x59:
+    case 0x5a:
+    case 0x5b:
+    case 0x5c:
+    case 0x5d:
+    case 0x5e:
+    case 0x5f:
+      i_pop (size, (unsigned char *) reg_map_32[opcode - 0x58]);
+      break;
+    case 0x60: /* PUSHA */
+      i_pusha (size);
+      break;
+    case 0x61: /* POPA */
+      i_popa (size);
+      break;
     case 0x66: /* Operand size override prefix */
       if (size == op_16)
 	size = op_32;

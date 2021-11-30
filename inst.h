@@ -40,5 +40,7 @@ void i_aaa (void);
 void i_aas (void);
 void i_inc (enum opmode size, unsigned char *value);
 void i_dec (enum opmode size, unsigned char *value);
+void i_pusha (enum opmode size);
+void i_popa (enum opmode size);
 
 #endif

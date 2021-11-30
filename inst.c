@@ -324,3 +324,59 @@ i_dec (enum opmode size, unsigned char *value)
   EFLAGS &= ~CF;
   EFLAGS |= cf;
 }
+
+void
+i_pusha (enum opmode size)
+{
+  if (size == op_32)
+    {
+      unsigned int esp = ESP;
+      i_push (size, (unsigned char *) &EAX);
+      i_push (size, (unsigned char *) &ECX);
+      i_push (size, (unsigned char *) &EDX);
+      i_push (size, (unsigned char *) &EBX);
+      i_push (size, (unsigned char *) &esp);
+      i_push (size, (unsigned char *) &EBP);
+      i_push (size, (unsigned char *) &ESI);
+      i_push (size, (unsigned char *) &EDI);
+    }
+  else
+    {
+      unsigned short sp = SP;
+      i_push (size, (unsigned char *) &AX);
+      i_push (size, (unsigned char *) &CX);
+      i_push (size, (unsigned char *) &DX);
+      i_push (size, (unsigned char *) &BX);
+      i_push (size, (unsigned char *) &sp);
+      i_push (size, (unsigned char *) &BP);
+      i_push (size, (unsigned char *) &SI);
+      i_push (size, (unsigned char *) &DI);
+    }
+}
+
+void
+i_popa (enum opmode size)
+{
+  if (size == op_32)
+    {
+      i_pop (size, (unsigned char *) &EDI);
+      i_pop (size, (unsigned char *) &ESI);
+      i_pop (size, (unsigned char *) &EBP);
+      ESP += 4;
+      i_pop (size, (unsigned char *) &EBX);
+      i_pop (size, (unsigned char *) &EDX);
+      i_pop (size, (unsigned char *) &ECX);
+      i_pop (size, (unsigned char *) &EAX);
+    }
+  else
+    {
+      i_pop (size, (unsigned char *) &DI);
+      i_pop (size, (unsigned char *) &SI);
+      i_pop (size, (unsigned char *) &BP);
+      ESP += 2;
+      i_pop (size, (unsigned char *) &BX);
+      i_pop (size, (unsigned char *) &DX);
+      i_pop (size, (unsigned char *) &CX);
+      i_pop (size, (unsigned char *) &AX);
+    }
+}
