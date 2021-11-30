@@ -218,14 +218,19 @@ decode_rm_32 (unsigned char byte, enum opmode size, unsigned char **rm)
 }
 
 static void
-decode_modrm (enum opmode size, unsigned char **rm, unsigned char **r)
+decode_modrm (enum opmode size, unsigned short segment, unsigned char **rm,
+	      unsigned char **r)
 {
   unsigned char byte = CURRENT_INST;
   EIP++;
   if (curr_task->mode == op_16)
     decode_rm_16 (byte, size, rm);
   else if (decode_rm_32 (byte, size, rm))
-    return;
+    {
+      *rm += segment * 16;
+      return;
+    }
+  *rm += segment * 16;
   if (size == op_8)
     *r = reg_map_8[(byte >> 3) & 7];
   else
@@ -244,6 +249,7 @@ void
 exec_inst (void)
 {
   unsigned char opcode = CURRENT_INST;
+  unsigned short segment = DS;
   unsigned char *rm;
   unsigned char *r;
   enum opmode size = curr_task->mode;
@@ -255,13 +261,13 @@ exec_inst (void)
     case 0x00: /* ADD r/m8, r8 */
       size = op_8;
     case 0x01: /* ADD r/m16/32, r16/32 */
-      decode_modrm (size, &rm, &r);
+      decode_modrm (size, segment, &rm, &r);
       i_add (size, rm, r);
       break;
     case 0x02: /* ADD r8, r/m8 */
       size = op_8;
     case 0x03: /* ADD r16/32, r/m16/32 */
-      decode_modrm (size, &rm, &r);
+      decode_modrm (size, segment, &rm, &r);
       i_add (size, r, rm);
       break;
     case 0x04: /* ADD AL, imm8 */
@@ -279,13 +285,13 @@ exec_inst (void)
     case 0x08: /* OR r/m8, r8 */
       size = op_8;
     case 0x09: /* OR r/m16/32, r16/32 */
-      decode_modrm (size, &rm, &r);
+      decode_modrm (size, segment, &rm, &r);
       i_or (size, rm, r);
       break;
     case 0x0a: /* OR r8, r/m8 */
       size = op_8;
     case 0x0b: /* OR r16/32, r/m16/32 */
-      decode_modrm (size, &rm, &r);
+      decode_modrm (size, segment, &rm, &r);
       i_or (size, r, rm);
       break;
     case 0x0c: /* OR AL, imm8 */
@@ -303,13 +309,13 @@ exec_inst (void)
     case 0x10: /* ADC r/m8, r8 */
       size = op_8;
     case 0x11: /* ADC r/m16/32, r16/32 */
-      decode_modrm (size, &rm, &r);
+      decode_modrm (size, segment, &rm, &r);
       i_adc (size, rm, r);
       break;
     case 0x12: /* ADC r8, r/m8 */
       size = op_8;
     case 0x13: /* ADC r16/32, r/m16/32 */
-      decode_modrm (size, &rm, &r);
+      decode_modrm (size, segment, &rm, &r);
       i_adc (size, r, rm);
       break;
     case 0x14: /* ADC AL, imm8 */
@@ -327,13 +333,13 @@ exec_inst (void)
     case 0x18: /* SBB r/m8, r8 */
       size = op_8;
     case 0x19: /* SBB r/m16/32, r16/32 */
-      decode_modrm (size, &rm, &r);
+      decode_modrm (size, segment, &rm, &r);
       i_sbb (size, rm, r);
       break;
     case 0x1a: /* SBB r8, r/m8 */
       size = op_8;
     case 0x1b: /* SBB r16/32, r/m16/32 */
-      decode_modrm (size, &rm, &r);
+      decode_modrm (size, segment, &rm, &r);
       i_sbb (size, r, rm);
       break;
     case 0x1c: /* SBB AL, imm8 */
