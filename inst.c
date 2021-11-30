@@ -14,6 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with IEMU. If not, see <https://www.gnu.org/licenses/>. */
 
+#include <string.h>
 #include "task.h"
 
 #define SIZE_HALF_LIMIT(size) (((unsigned long) 1 << (size * 8 - 1)) - 1)
@@ -31,7 +32,7 @@
 	EFLAGS |= OF;						\
       else							\
 	EFLAGS &= ~OF;						\
-      if ((dest & 0xf) op (src & 0xf) > 0xf)			\
+      if (((dest & 0xf) op (src & 0xf)) > 0xf)			\
 	EFLAGS |= AF;						\
       else							\
 	EFLAGS &= ~AF;						\
@@ -71,4 +72,71 @@ i_add (enum opmode size, unsigned char *dest, unsigned char *src)
       I_ARITH (+, 4, OP32 (dest), OP32 (src));
       break;
     }
+}
+
+void
+i_or (enum opmode size, unsigned char *dest, unsigned char *src)
+{
+  switch (size)
+    {
+    case op_8:
+      I_ARITH (|, 1, *dest, *src);
+      break;
+    case op_16:
+      I_ARITH (|, 2, OP16 (dest), OP16 (src));
+      break;
+    case op_32:
+      I_ARITH (|, 4, OP32 (dest), OP32 (src));
+      break;
+    }
+}
+
+void
+i_adc (enum opmode size, unsigned char *dest, unsigned char *src)
+{
+  unsigned char cf = !!(EFLAGS & CF);
+  switch (size)
+    {
+    case op_8:
+      I_ARITH (+ cf +, 1, *dest, *src);
+      break;
+    case op_16:
+      I_ARITH (+ cf +, 2, OP16 (dest), OP16 (src));
+      break;
+    case op_32:
+      I_ARITH (+ cf +, 4, OP32 (dest), OP32 (src));
+      break;
+    }
+}
+
+void
+i_sbb (enum opmode size, unsigned char *dest, unsigned char *src)
+{
+  unsigned char cf = !!(EFLAGS & CF);
+  switch (size)
+    {
+    case op_8:
+      I_ARITH (- cf -, 1, *dest, *src);
+      break;
+    case op_16:
+      I_ARITH (- cf -, 2, OP16 (dest), OP16 (src));
+      break;
+    case op_32:
+      I_ARITH (- cf -, 4, OP32 (dest), OP32 (src));
+      break;
+    }
+}
+
+void
+i_push (enum opmode size, unsigned char *value)
+{
+  memcpy (memory + ESP - size, value, size);
+  ESP -= size;
+}
+
+void
+i_pop (enum opmode size, unsigned char *value)
+{
+  ESP += size;
+  memcpy (value, memory + ESP - size, size);
 }

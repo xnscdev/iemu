@@ -21,10 +21,14 @@ enum opmode
 {
   op_8      = 1,
   op_16     = 2,
-  op_32     = 4,
-  op_64     = 8
+  op_32     = 4
 };
 
 void i_add (enum opmode size, unsigned char *dest, unsigned char *src);
+void i_or (enum opmode size, unsigned char *dest, unsigned char *src);
+void i_adc (enum opmode size, unsigned char *dest, unsigned char *src);
+void i_sbb (enum opmode size, unsigned char *dest, unsigned char *src);
+void i_push (enum opmode size, unsigned char *value);
+void i_pop (enum opmode size, unsigned char *value);
 
 #endif

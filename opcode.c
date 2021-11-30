@@ -232,6 +232,14 @@ decode_modrm (enum opmode size, unsigned char **rm, unsigned char **r)
     *r = (unsigned char *) reg_map_32[(byte >> 3) & 7];
 }
 
+static void
+exec_inst_2b (void)
+{
+  unsigned char opcode = CURRENT_INST;
+  EIP++;
+  invalid_opcode ();
+}
+
 void
 exec_inst (void)
 {
@@ -262,11 +270,91 @@ exec_inst (void)
       i_add (size, &AL, &CURRENT_INST);
       EIP += size;
       break;
+    case 0x06: /* PUSH ES */
+      i_push (curr_task->mode, (unsigned char *) &ES);
+      break;
+    case 0x07: /* POP ES */
+      i_pop (curr_task->mode, (unsigned char *) &ES);
+      break;
+    case 0x08: /* OR r/m8, r8 */
+      size = op_8;
+    case 0x09: /* OR r/m16/32, r16/32 */
+      decode_modrm (size, &rm, &r);
+      i_or (size, rm, r);
+      break;
+    case 0x0a: /* OR r8, r/m8 */
+      size = op_8;
+    case 0x0b: /* OR r16/32, r/m16/32 */
+      decode_modrm (size, &rm, &r);
+      i_or (size, r, rm);
+      break;
+    case 0x0c: /* OR AL, imm8 */
+      size = op_8;
+    case 0x0d: /* OR eAX, imm16/32 */
+      i_or (size, &AL, &CURRENT_INST);
+      EIP += size;
+      break;
+    case 0x0e: /* PUSH CS */
+      i_push (curr_task->mode, (unsigned char *) &CS);
+      break;
+    case 0x0f: /* Two-byte instructions */
+      exec_inst_2b ();
+      break;
+    case 0x10: /* ADC r/m8, r8 */
+      size = op_8;
+    case 0x11: /* ADC r/m16/32, r16/32 */
+      decode_modrm (size, &rm, &r);
+      i_adc (size, rm, r);
+      break;
+    case 0x12: /* ADC r8, r/m8 */
+      size = op_8;
+    case 0x13: /* ADC r16/32, r/m16/32 */
+      decode_modrm (size, &rm, &r);
+      i_adc (size, r, rm);
+      break;
+    case 0x14: /* ADC AL, imm8 */
+      size = op_8;
+    case 0x15: /* ADC eAX, imm16/32 */
+      i_adc (size, &AL, &CURRENT_INST);
+      EIP += size;
+      break;
+    case 0x16: /* PUSH SS */
+      i_push (curr_task->mode, (unsigned char *) &SS);
+      break;
+    case 0x17: /* POP SS */
+      i_pop (curr_task->mode, (unsigned char *) &SS);
+      break;
+    case 0x18: /* SBB r/m8, r8 */
+      size = op_8;
+    case 0x19: /* SBB r/m16/32, r16/32 */
+      decode_modrm (size, &rm, &r);
+      i_sbb (size, rm, r);
+      break;
+    case 0x1a: /* SBB r8, r/m8 */
+      size = op_8;
+    case 0x1b: /* SBB r16/32, r/m16/32 */
+      decode_modrm (size, &rm, &r);
+      i_sbb (size, r, rm);
+      break;
+    case 0x1c: /* SBB AL, imm8 */
+      size = op_8;
+    case 0x1d: /* SBB eAX, imm16/32 */
+      i_sbb (size, &AL, &CURRENT_INST);
+      EIP += size;
+      break;
+    case 0x1e: /* PUSH DS */
+      i_push (curr_task->mode, (unsigned char *) &DS);
+      break;
+    case 0x1f: /* POP DS */
+      i_pop (curr_task->mode, (unsigned char *) &DS);
+      break;
     case 0x66: /* Operand size override prefix */
       if (size == op_16)
 	size = op_32;
       else
 	size = op_16;
+      opcode = CURRENT_INST;
+      EIP++;
       goto read;
     default:
       invalid_opcode ();
