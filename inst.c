@@ -20,7 +20,7 @@
 #define SIZE_HALF_LIMIT(size) (((unsigned long) 1 << (size * 8 - 1)) - 1)
 #define SIZE_LIMIT(size)      (((unsigned long) 1 << (size * 8)) - 1)
 
-#define I_ARITH(op, size, dest, src)				\
+#define __I_ARITH(op, size, dest, src, real)			\
   do								\
     {								\
       unsigned long x = dest op src;				\
@@ -44,7 +44,8 @@
 	EFLAGS |= SF;						\
       else							\
 	EFLAGS &= ~SF;						\
-      dest = x;							\
+      if (real)							\
+	dest = x;						\
       x ^= x >> 16;						\
       x ^= x >> 8;						\
       x ^= x >> 4;						\
@@ -56,6 +57,8 @@
 	EFLAGS &= ~PF;						\
     }								\
   while (0)
+
+#define I_ARITH(op, size, dest, src) __I_ARITH (op, size, dest, src, 1)
 
 void
 i_add (enum opmode size, unsigned char *dest, unsigned char *src)
@@ -128,6 +131,74 @@ i_sbb (enum opmode size, unsigned char *dest, unsigned char *src)
 }
 
 void
+i_and (enum opmode size, unsigned char *dest, unsigned char *src)
+{
+  switch (size)
+    {
+    case op_8:
+      I_ARITH (&, 1, *dest, *src);
+      break;
+    case op_16:
+      I_ARITH (&, 2, OP16 (dest), OP16 (src));
+      break;
+    case op_32:
+      I_ARITH (&, 4, OP32 (dest), OP32 (src));
+      break;
+    }
+}
+
+void
+i_sub (enum opmode size, unsigned char *dest, unsigned char *src)
+{
+  switch (size)
+    {
+    case op_8:
+      I_ARITH (-, 1, *dest, *src);
+      break;
+    case op_16:
+      I_ARITH (-, 2, OP16 (dest), OP16 (src));
+      break;
+    case op_32:
+      I_ARITH (-, 4, OP32 (dest), OP32 (src));
+      break;
+    }
+}
+
+void
+i_xor (enum opmode size, unsigned char *dest, unsigned char *src)
+{
+  switch (size)
+    {
+    case op_8:
+      I_ARITH (^, 1, *dest, *src);
+      break;
+    case op_16:
+      I_ARITH (^, 2, OP16 (dest), OP16 (src));
+      break;
+    case op_32:
+      I_ARITH (^, 4, OP32 (dest), OP32 (src));
+      break;
+    }
+}
+
+void
+i_cmp (enum opmode size, unsigned char *dest, unsigned char *src)
+{
+  switch (size)
+    {
+    case op_8:
+      __I_ARITH (-, 1, *dest, *src, 0);
+      break;
+    case op_16:
+      __I_ARITH (-, 2, OP16 (dest), OP16 (src), 0);
+      break;
+    case op_32:
+      __I_ARITH (-, 4, OP32 (dest), OP32 (src), 0);
+      break;
+    }
+}
+
+void
 i_push (enum opmode size, unsigned char *value)
 {
   memcpy (memory + ESP - size, value, size);
@@ -139,4 +210,117 @@ i_pop (enum opmode size, unsigned char *value)
 {
   ESP += size;
   memcpy (value, memory + ESP - size, size);
+}
+
+void
+i_daa (void)
+{
+  unsigned char cf = EFLAGS & CF;
+  unsigned char al = AL;
+  EFLAGS &= ~CF;
+  if ((AL & 0xf) > 9 || (EFLAGS & AF))
+    {
+      if (cf || AL > 0xf9)
+	EFLAGS |= CF;
+      AL += 6;
+      EFLAGS |= AF;
+    }
+  else
+    EFLAGS &= ~AF;
+  if (al > 0x99 || cf)
+    {
+      AL += 0x60;
+      EFLAGS |= CF;
+    }
+  else
+    EFLAGS &= ~CF;
+}
+
+void
+i_das (void)
+{
+  unsigned char cf = EFLAGS & CF;
+  unsigned char al = AL;
+  EFLAGS &= ~CF;
+  if ((AL & 0xf) > 9 || (EFLAGS & AF))
+    {
+      if (cf || AL < 6)
+	EFLAGS |= CF;
+      AL -= 6;
+      EFLAGS |= AF;
+    }
+  else
+    EFLAGS &= ~AF;
+  if (al > 0x99 || cf)
+    {
+      AL -= 0x60;
+      EFLAGS |= CF;
+    }
+}
+
+void
+i_aaa (void)
+{
+  if ((AL & 0xf) > 9 || (EFLAGS & AF))
+    {
+      AX += 0x106;
+      EFLAGS |= AF | CF;
+    }
+  else
+    EFLAGS &= ~(AF | CF);
+  AL &= 0xf;
+}
+
+void
+i_aas (void)
+{
+  if ((AL & 0xf) > 9 || (EFLAGS & AF))
+    {
+      AX -= 6;
+      AH--;
+      EFLAGS |= AF | CF;
+    }
+  else
+    EFLAGS &= ~(AF | CF);
+  AL &= 0xf;
+}
+
+void
+i_inc (enum opmode size, unsigned char *value)
+{
+  unsigned char cf = EFLAGS & CF;
+  switch (size)
+    {
+    case op_8:
+      I_ARITH (+, 1, *value, 1);
+      break;
+    case op_16:
+      I_ARITH (+, 2, OP16 (value), 1);
+      break;
+    case op_32:
+      I_ARITH (+, 4, OP32 (value), 1);
+      break;
+    }
+  EFLAGS &= ~CF;
+  EFLAGS |= cf;
+}
+
+void
+i_dec (enum opmode size, unsigned char *value)
+{
+  unsigned char cf = EFLAGS & CF;
+  switch (size)
+    {
+    case op_8:
+      I_ARITH (-, 1, *value, 1);
+      break;
+    case op_16:
+      I_ARITH (-, 2, OP16 (value), 1);
+      break;
+    case op_32:
+      I_ARITH (-, 4, OP32 (value), 1);
+      break;
+    }
+  EFLAGS &= ~CF;
+  EFLAGS |= cf;
 }

@@ -28,7 +28,17 @@ void i_add (enum opmode size, unsigned char *dest, unsigned char *src);
 void i_or (enum opmode size, unsigned char *dest, unsigned char *src);
 void i_adc (enum opmode size, unsigned char *dest, unsigned char *src);
 void i_sbb (enum opmode size, unsigned char *dest, unsigned char *src);
+void i_and (enum opmode size, unsigned char *dest, unsigned char *src);
+void i_sub (enum opmode size, unsigned char *dest, unsigned char *src);
+void i_xor (enum opmode size, unsigned char *dest, unsigned char *src);
+void i_cmp (enum opmode size, unsigned char *dest, unsigned char *src);
 void i_push (enum opmode size, unsigned char *value);
 void i_pop (enum opmode size, unsigned char *value);
+void i_daa (void);
+void i_das (void);
+void i_aaa (void);
+void i_aas (void);
+void i_inc (enum opmode size, unsigned char *value);
+void i_dec (enum opmode size, unsigned char *value);
 
 #endif

@@ -30,7 +30,8 @@ invalid_opcode (void)
 }
 
 static void
-decode_rm_16 (unsigned char byte, enum opmode size, unsigned char **rm)
+decode_rm_16 (unsigned char byte, enum opmode size, unsigned char **rm,
+	      char *ss)
 {
   switch (byte >> 6)
     {
@@ -45,9 +46,11 @@ decode_rm_16 (unsigned char byte, enum opmode size, unsigned char **rm)
 	  break;
 	case 2:
 	  *rm = memory + BP + SI;
+	  *ss = 1;
 	  break;
 	case 3:
 	  *rm = memory + BP + DI;
+	  *ss = 1;
 	  break;
 	case 4:
 	  *rm = memory + SI;
@@ -77,10 +80,12 @@ decode_rm_16 (unsigned char byte, enum opmode size, unsigned char **rm)
 	  break;
 	case 2:
 	  *rm = memory + BP + SI + CURRENT_INST;
+	  *ss = 1;
 	  EIP++;
 	  break;
 	case 3:
 	  *rm = memory + BP + DI + CURRENT_INST;
+	  *ss = 1;
 	  EIP++;
 	  break;
 	case 4:
@@ -93,6 +98,7 @@ decode_rm_16 (unsigned char byte, enum opmode size, unsigned char **rm)
 	  break;
 	case 6:
 	  *rm = memory + BP + CURRENT_INST;
+	  *ss = 1;
 	  EIP++;
 	  break;
 	case 7:
@@ -114,10 +120,12 @@ decode_rm_16 (unsigned char byte, enum opmode size, unsigned char **rm)
 	  break;
 	case 2:
 	  *rm = memory + BP + SI + *((unsigned short *) &CURRENT_INST);
+	  *ss = 1;
 	  EIP += 2;
 	  break;
 	case 3:
 	  *rm = memory + BP + DI + *((unsigned short *) &CURRENT_INST);
+	  *ss = 1;
 	  EIP += 2;
 	  break;
 	case 4:
@@ -130,6 +138,7 @@ decode_rm_16 (unsigned char byte, enum opmode size, unsigned char **rm)
 	  break;
 	case 6:
 	  *rm = memory + BP + *((unsigned short *) &CURRENT_INST);
+	  *ss = 1;
 	  EIP += 2;
 	  break;
 	case 7:
@@ -142,24 +151,31 @@ decode_rm_16 (unsigned char byte, enum opmode size, unsigned char **rm)
       if (size == op_8)
 	*rm = reg_map_8[byte & 7];
       else
-	*rm = (unsigned char *) reg_map_32[byte & 7];
+	{
+	  *rm = (unsigned char *) reg_map_32[byte & 7];
+	  if ((byte & 7) == 4 || (byte & 7) == 5)
+	    *ss = 1;
+	}
       break;
     }
 }
 
 static void
-decode_sib (enum opmode size, unsigned char **rm)
+decode_sib (enum opmode size, unsigned char **rm, char *ss)
 {
   unsigned char byte = CURRENT_INST;
   EIP++;
   if ((byte & 7) == 4)
     invalid_opcode ();
+  if (((byte >> 3) & 7) == 5)
+    *ss = 1;
   *rm = memory + *reg_map_32[byte & 7] * sib_scales[byte >> 6] +
     *reg_map_32[(byte >> 3) & 7];
 }
 
 static int
-decode_rm_32 (unsigned char byte, enum opmode size, unsigned char **rm)
+decode_rm_32 (unsigned char byte, enum opmode size, unsigned char **rm,
+	      char *ss)
 {
   switch (byte >> 6)
     {
@@ -167,7 +183,7 @@ decode_rm_32 (unsigned char byte, enum opmode size, unsigned char **rm)
       switch (byte & 7)
 	{
 	case 4:
-	  decode_sib (size, rm);
+	  decode_sib (size, rm, ss);
 	  return 1;
 	case 5:
 	  *rm = memory + *((unsigned int *) &CURRENT_INST);
@@ -180,13 +196,15 @@ decode_rm_32 (unsigned char byte, enum opmode size, unsigned char **rm)
     case 1:
       if ((byte & 7) == 4)
 	{
-	  decode_sib (size, rm);
+	  decode_sib (size, rm, ss);
 	  *rm += CURRENT_INST;
 	  EIP++;
 	  return 1;
 	}
       else
 	{
+	  if ((byte & 7) == 5)
+	    *ss = 1;
 	  *rm = memory + *reg_map_32[byte & 7] +
 	    *((unsigned int *) &CURRENT_INST);
 	  EIP += 4;
@@ -195,13 +213,15 @@ decode_rm_32 (unsigned char byte, enum opmode size, unsigned char **rm)
     case 2:
       if ((byte & 7) == 4)
 	{
-	  decode_sib (size, rm);
+	  decode_sib (size, rm, ss);
 	  *rm += *((unsigned int *) &CURRENT_INST);
 	  EIP += 4;
 	  return 1;
 	}
       else
 	{
+	  if ((byte & 7) == 5)
+	    *ss = 1;
 	  *rm = memory + *reg_map_32[byte & 7] +
 	    *((unsigned int *) &CURRENT_INST);
 	  EIP += 4;
@@ -211,26 +231,41 @@ decode_rm_32 (unsigned char byte, enum opmode size, unsigned char **rm)
       if (size == op_8)
 	*rm = reg_map_8[byte & 7];
       else
-	*rm = (unsigned char *) reg_map_32[byte & 7];
+	{
+	  *rm = (unsigned char *) reg_map_32[byte & 7];
+	  if ((byte & 7) == 4 || (byte & 7) == 5)
+	    *ss = 1;
+	}
       break;
     }
   return 0;
 }
 
 static void
-decode_modrm (enum opmode size, unsigned short segment, unsigned char **rm,
+decode_modrm (enum opmode size, unsigned short *segment, unsigned char **rm,
 	      unsigned char **r)
 {
   unsigned char byte = CURRENT_INST;
+  char ss = 0;
   EIP++;
   if (curr_task->mode == op_16)
-    decode_rm_16 (byte, size, rm);
-  else if (decode_rm_32 (byte, size, rm))
+    decode_rm_16 (byte, size, rm, &ss);
+  else if (decode_rm_32 (byte, size, rm, &ss))
     {
-      *rm += segment * 16;
+      if (segment)
+	*rm += *segment * 16;
+      else if (ss)
+	*rm += SS * 16;
+      else
+	*rm += DS * 16;
       return;
     }
-  *rm += segment * 16;
+  if (segment)
+    *rm += *segment * 16;
+  else if (ss)
+    *rm += SS * 16;
+  else
+    *rm += DS * 16;
   if (size == op_8)
     *r = reg_map_8[(byte >> 3) & 7];
   else
@@ -249,7 +284,7 @@ void
 exec_inst (void)
 {
   unsigned char opcode = CURRENT_INST;
-  unsigned short segment = DS;
+  unsigned short *segment = NULL;
   unsigned char *rm;
   unsigned char *r;
   enum opmode size = curr_task->mode;
@@ -353,6 +388,130 @@ exec_inst (void)
       break;
     case 0x1f: /* POP DS */
       i_pop (curr_task->mode, (unsigned char *) &DS);
+      break;
+    case 0x20: /* AND r/m8, r8 */
+      size = op_8;
+    case 0x21: /* AND r/m16/32, r16/32 */
+      decode_modrm (size, segment, &rm, &r);
+      i_and (size, rm, r);
+      break;
+    case 0x22: /* AND r8, r/m8 */
+      size = op_8;
+    case 0x23: /* AND r16/32, r/m16/32 */
+      decode_modrm (size, segment, &rm, &r);
+      i_and (size, r, rm);
+      break;
+    case 0x24: /* AND AL, imm8 */
+      size = op_8;
+    case 0x25: /* AND eAX, imm16/32 */
+      i_and (size, &AL, &CURRENT_INST);
+      EIP += size;
+      break;
+    case 0x26: /* ES segment override prefix */
+      segment = &ES;
+      opcode = CURRENT_INST;
+      EIP++;
+      goto read;
+    case 0x27: /* DAA */
+      i_daa ();
+      break;
+    case 0x28: /* SUB r/m8, r8 */
+      size = op_8;
+    case 0x29: /* SUB r/m16/32, r16/32 */
+      decode_modrm (size, segment, &rm, &r);
+      i_sub (size, rm, r);
+      break;
+    case 0x2a: /* SUB r8, r/m8 */
+      size = op_8;
+    case 0x2b: /* SUB r16/32, r/m16/32 */
+      decode_modrm (size, segment, &rm, &r);
+      i_sub (size, r, rm);
+      break;
+    case 0x2c: /* SUB AL, imm8 */
+      size = op_8;
+    case 0x2d: /* SUB eAX, imm16/32 */
+      i_sub (size, &AL, &CURRENT_INST);
+      EIP += size;
+      break;
+    case 0x2e: /* CS segment override prefix */
+      segment = &CS;
+      opcode = CURRENT_INST;
+      EIP++;
+      goto read;
+    case 0x2f: /* DAS */
+      i_das ();
+      break;
+    case 0x30: /* XOR r/m8, r8 */
+      size = op_8;
+    case 0x31: /* XOR r/m16/32, r16/32 */
+      decode_modrm (size, segment, &rm, &r);
+      i_xor (size, rm, r);
+      break;
+    case 0x32: /* XOR r8, r/m8 */
+      size = op_8;
+    case 0x33: /* XOR r16/32, r/m16/32 */
+      decode_modrm (size, segment, &rm, &r);
+      i_xor (size, r, rm);
+      break;
+    case 0x34: /* XOR AL, imm8 */
+      size = op_8;
+    case 0x35: /* XOR eAX, imm16/32 */
+      i_xor (size, &AL, &CURRENT_INST);
+      EIP += size;
+      break;
+    case 0x36: /* SS segment override prefix */
+      segment = &SS;
+      opcode = CURRENT_INST;
+      EIP++;
+      goto read;
+    case 0x37: /* AAA */
+      i_aaa ();
+      break;
+    case 0x38: /* CMP r/m8, r8 */
+      size = op_8;
+    case 0x39: /* CMP r/m16/32, r16/32 */
+      decode_modrm (size, segment, &rm, &r);
+      i_cmp (size, rm, r);
+      break;
+    case 0x3a: /* CMP r8, r/m8 */
+      size = op_8;
+    case 0x3b: /* CMP r16/32, r/m16/32 */
+      decode_modrm (size, segment, &rm, &r);
+      i_cmp (size, r, rm);
+      break;
+    case 0x3c: /* CMP AL, imm8 */
+      size = op_8;
+    case 0x3d: /* CMP eAX, imm16/32 */
+      i_cmp (size, &AL, &CURRENT_INST);
+      EIP += size;
+      break;
+    case 0x3e: /* DS segment override prefix */
+      segment = &DS;
+      opcode = CURRENT_INST;
+      EIP++;
+      goto read;
+    case 0x3f: /* AAS */
+      i_aas ();
+      break;
+    case 0x40: /* INC r16/32 */
+    case 0x41:
+    case 0x42:
+    case 0x43:
+    case 0x44:
+    case 0x45:
+    case 0x46:
+    case 0x47:
+      i_inc (size, (unsigned char *) reg_map_32[opcode - 0x40]);
+      break;
+    case 0x48: /* DEC r16/32 */
+    case 0x49:
+    case 0x4a:
+    case 0x4b:
+    case 0x4c:
+    case 0x4d:
+    case 0x4e:
+    case 0x4f:
+      i_dec (size, (unsigned char *) reg_map_32[opcode - 0x48]);
       break;
     case 0x66: /* Operand size override prefix */
       if (size == op_16)
