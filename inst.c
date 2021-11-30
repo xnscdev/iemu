@@ -15,6 +15,7 @@
    along with IEMU. If not, see <https://www.gnu.org/licenses/>. */
 
 #include <string.h>
+#include "exc.h"
 #include "task.h"
 
 #define SIZE_HALF_LIMIT(size) (((unsigned long) 1 << (size * 8 - 1)) - 1)
@@ -378,5 +379,23 @@ i_popa (enum opmode size)
       i_pop (size, (unsigned char *) &DX);
       i_pop (size, (unsigned char *) &CX);
       i_pop (size, (unsigned char *) &AX);
+    }
+}
+
+void
+i_bound (enum opmode size, unsigned char *value, unsigned char *bounds)
+{
+  if ((void *) bounds >= (void *) registers
+      && (void *) bounds < (void *) (registers + 1))
+    exception (exc_UD);
+  if (size == op_16)
+    {
+      if (OP16 (value) < OP16 (bounds) || OP16 (value) > OP16 (bounds + 2))
+	exception (exc_BR);
+    }
+  else
+    {
+      if (OP32 (value) < OP32 (bounds) || OP32 (value) > OP32 (bounds + 4))
+	exception (exc_BR);
     }
 }

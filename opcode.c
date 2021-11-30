@@ -14,20 +14,13 @@
    You should have received a copy of the GNU General Public License
    along with IEMU. If not, see <https://www.gnu.org/licenses/>. */
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <stddef.h>
+#include "exc.h"
 #include "task.h"
 
 static unsigned char sib_scales[4] = {1, 2, 4, 8};
 static unsigned char *reg_map_8[8];
 static unsigned int *reg_map_32[8];
-
-static void
-invalid_opcode (void)
-{
-  fprintf (stderr, "Invalid opcode at 0x%04x:0x%04x\n", CS, EIP_REAL);
-  exit (1);
-}
 
 static void
 decode_rm_16 (unsigned char byte, enum opmode size, unsigned char **rm,
@@ -166,7 +159,7 @@ decode_sib (enum opmode size, unsigned char **rm, char *ss)
   unsigned char byte = CURRENT_INST;
   EIP++;
   if ((byte & 7) == 4)
-    invalid_opcode ();
+    exception (exc_UD);
   if (((byte >> 3) & 7) == 5)
     *ss = 1;
   *rm = memory + *reg_map_32[byte & 7] * sib_scales[byte >> 6] +
@@ -277,7 +270,7 @@ exec_inst_2b (void)
 {
   unsigned char opcode = CURRENT_INST;
   EIP++;
-  invalid_opcode ();
+  exception (exc_UD);
 }
 
 void
@@ -539,6 +532,10 @@ exec_inst (void)
     case 0x61: /* POPA */
       i_popa (size);
       break;
+    case 0x62: /* BOUND r16/32, m16/32&16/32 */
+      decode_modrm (size, segment, &rm, &r);
+      i_bound (size, r, rm);
+      break;
     case 0x66: /* Operand size override prefix */
       if (size == op_16)
 	size = op_32;
@@ -548,7 +545,7 @@ exec_inst (void)
       EIP++;
       goto read;
     default:
-      invalid_opcode ();
+      exception (exc_UD);
     }
 
   EIP_REAL = EIP;
